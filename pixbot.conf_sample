@@ -1,0 +1,7 @@
+[init]
+bot_token = 1234567890abcdefg
+url = qwertyuiop.com
+server_port = 443 or 80 or 88 or 8443
+proxy_port = 5566
+pixiv_username = user
+pixiv_password = pswd
