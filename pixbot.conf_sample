@@ -5,3 +5,9 @@ server_port = 443 or 80 or 88 or 8443
 proxy_port = 5566
 pixiv_username = user
 pixiv_password = pswd
+requests_kwargs = {
+	'proxies': {
+		'http': 'http://xxx.xxx.xxx.xxx:xxxx',
+		'https': 'http://xxx.xxx.xxx.xxx:xxxx'
+	}
+}

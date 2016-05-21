@@ -1,11 +1,15 @@
+#!/usr/bin/env python
+
 import telebot
 import logging
 import flask
 import configparser
+import pixiv
 
 config = configparser.ConfigParser()
 config.sections()
 config.read('pixbot.conf')
+requests_kwargs = None
 
 API_TOKEN = config['init']['bot_token']
 
@@ -13,6 +17,15 @@ WEBHOOK_HOST = config['init']['url']
 WEBHOOK_PORT = int(config['init']['server_port'])
 WEBHOOK_PORT_PROXY = int(config['init']['proxy_port'])
 WEBHOOK_LISTEN = '0.0.0.0'
+
+pixiv.pixiv_username = config['init']['pixiv_username']
+pixiv.pixiv_password = config['init']['pixiv_password']
+
+if config.has_option('Default', 'requests_kwargs'):
+    requests_kwargs = config['Default']['requests_kwargs'].replace('\n', '')
+    requests_kwargs = eval(requests_kwargs)
+
+p = pixiv.pixiv_crewler(**requests_kwargs)
 
 WEBHOOK_URL_BASE = 'https://%s:%s' % (WEBHOOK_HOST, WEBHOOK_PORT)
 WEBHOOK_URL_PATH = '/%s/' % (API_TOKEN)
@@ -50,19 +63,31 @@ def webhook():
 @bot.message_handler(commands=['pixbot'])
 def parse_command(message):
     print('get command')
-    global command_handler
+    func_dict = {
+        'help': lambda message: help(message),
+        'pixiv': lambda message: get_image(message)
+    }
     m = message.text.split(' ')
-    if len(m) > 2 and m[1].lower() in command_handler:
-        command_handler[m[1].lower()](message)
+    if len(m) > 2:
+        if m[1].lower() in func_dict:
+            func_dict[m[1]]
+        else:
+            func_dict['pixiv'](m[1:])
 
-def help(message):
+def help(messages):
     print('help')
     bot.reply_to('test')
 
-@bot.message_handler(func=lambda message: True)
-def echo_message(message):
-    print('>>echo_message: ' + message.text)
-    bot.reply_to(message, message.text)
+def get_image(keywords):
+    global p
+    if keywords and len(keywords) > 0:
+        image = p.get_image(keywords)
+        print(image)
+
+# @bot.message_handler(func=lambda message: True)
+# def echo_message(message):
+#     print('>>echo_message: ' + message.text)
+#     bot.reply_to(message, message.text)
 
 # Remove webhook, it fails sometimes the set if there is a previous webhook
 bot.remove_webhook()
