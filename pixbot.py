@@ -21,8 +21,8 @@ WEBHOOK_LISTEN = '0.0.0.0'
 pixiv.pixiv_username = config['init']['pixiv_username']
 pixiv.pixiv_password = config['init']['pixiv_password']
 
-if config.has_option('Default', 'requests_kwargs'):
-    requests_kwargs = config['Default']['requests_kwargs'].replace('\n', '')
+if config.has_option('init', 'requests_kwargs'):
+    requests_kwargs = config['init']['requests_kwargs'].replace('\n', '')
     requests_kwargs = eval(requests_kwargs)
 
 p = pixiv.pixiv_crewler(**requests_kwargs)
@@ -36,11 +36,20 @@ telebot.logger.setLevel(logging.INFO)
 bot = telebot.TeleBot(API_TOKEN)
 app = flask.Flask(__name__)
 
+def help(message):
+    print('help')
+    bot.reply_to(message, '/pixbot [keyword list] - find image from pixiv using keywords.')
+
+def get_image(message):
+    global p
+    keywords = message.text.split(' ')[1:]
+    image = p.get_image(keywords)
+    bot.reply_to(message, image['origin'])
+
 # Empty webserver index, return nothing, just http 200
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     return ''
-
 
 # Process webhook calls
 @app.route(WEBHOOK_URL_PATH, methods=['POST'])
@@ -62,32 +71,22 @@ def webhook():
 # Handle '/pixbot'
 @bot.message_handler(commands=['pixbot'])
 def parse_command(message):
-    print('get command')
+    print('get command ' + message.text)
     func_dict = {
         'help': lambda message: help(message),
         'pixiv': lambda message: get_image(message)
     }
     m = message.text.split(' ')
-    if len(m) > 2:
+    if len(m) >= 2:
         if m[1].lower() in func_dict:
-            func_dict[m[1]]
+            func_dict[m[1]](message)
         else:
-            func_dict['pixiv'](m[1:])
+            func_dict['pixiv'](message)
 
-def help(messages):
-    print('help')
-    bot.reply_to('test')
-
-def get_image(keywords):
-    global p
-    if keywords and len(keywords) > 0:
-        image = p.get_image(keywords)
-        print(image)
-
-# @bot.message_handler(func=lambda message: True)
-# def echo_message(message):
-#     print('>>echo_message: ' + message.text)
-#     bot.reply_to(message, message.text)
+@bot.message_handler(func=lambda message: True)
+def echo_message(message):
+    print('>>echo_message: ' + message.text)
+    bot.reply_to(message, message.text)
 
 # Remove webhook, it fails sometimes the set if there is a previous webhook
 bot.remove_webhook()
